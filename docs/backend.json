@@ -1,0 +1,89 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "title": "Perfil do Usuário",
+      "description": "Informações de perfil, disciplina e vínculo corporativo.",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "empresaId": { "type": "string", "description": "ID da empresa para isolamento multi-tenant" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "disciplineLevel": { "type": "number" },
+        "totalAudits": { "type": "number" },
+        "lastAuditDate": { "type": "string", "format": "date-time" },
+        "lastCoachFeedback": { "type": "string" },
+        "lastCoachTone": { "type": "string" }
+      },
+      "required": ["empresaId"]
+    },
+    "Audit": {
+      "title": "Auditoria 5S",
+      "description": "Documento raiz de uma auditoria com dados desnormalizados.",
+      "type": "object",
+      "properties": {
+        "titulo": { "type": "string" },
+        "comentario": { "type": "string" },
+        "empresaId": { "type": "string" },
+        "nomeEmpresa": { "type": "string" },
+        "setor": { "type": "string" },
+        "auditorId": { "type": "string" },
+        "nomeAuditor": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "scoreTotal": { "type": "number" },
+        "status": { "type": "string", "enum": ["aberta", "concluida"] },
+        "beforeImageUrl": { "type": "string" },
+        "afterImageUrl": { "type": "string" },
+        "notes": { "type": "string" },
+        "coachFeedback": { "type": "string" },
+        "coachTone": { "type": "string" }
+      },
+      "required": ["empresaId", "auditorId", "status"]
+    },
+    "AuditItem": {
+      "title": "Item de Auditoria",
+      "description": "Detalhes individuais de cada senso (Seiri, Seiton, etc) em uma auditoria.",
+      "type": "object",
+      "properties": {
+        "senso": { "type": "string", "enum": ["Seiri", "Seiton", "Seiso", "Seiketsu", "Shitsuke"] },
+        "descricao": { "type": "string" },
+        "nota": { "type": "number" },
+        "fotoUrl": { "type": "string" }
+      }
+    },
+    "AnalyticsMensal": {
+      "title": "Analytics Mensal",
+      "description": "Consolidado de performance por empresa e mês.",
+      "type": "object",
+      "properties": {
+        "empresaId": { "type": "string" },
+        "monthYear": { "type": "string" },
+        "totalAudits": { "type": "number" },
+        "totalScore": { "type": "number" },
+        "lastUpdate": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Dados do usuário e métricas de disciplina."
+    },
+    "/audits/{auditId}": {
+      "schema": "Audit",
+      "description": "Raiz das auditorias por empresa."
+    },
+    "/audits/{auditId}/items/{itemId}": {
+      "schema": "AuditItem",
+      "description": "Itens detalhados da auditoria."
+    },
+    "/analytics_mensal/{docId}": {
+      "schema": "AnalyticsMensal",
+      "description": "Dados agregados via Cloud Functions v2."
+    }
+  }
+}

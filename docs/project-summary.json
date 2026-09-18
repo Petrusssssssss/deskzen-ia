@@ -1,0 +1,30 @@
+
+{
+  "app_name": "Coach 5S - Auditoria e Disciplina",
+  "description": "Aplicativo de auditoria 5S focado em gamificação e disciplina, utilizando IA para fornecer feedback comportamental ríspido ou motivacional.",
+  "tech_stack": {
+    "frontend": "Next.js 15 (App Router)",
+    "styling": "Tailwind CSS + ShadCN UI",
+    "backend_auth": "Firebase (Auth)",
+    "backend_db": "Firebase (Firestore)",
+    "backend_storage": "Supabase Storage",
+    "ai_engine": "Genkit (Google AI Plugin - Gemini 2.5 Flash)",
+    "environment": "Node.js 20+ (Server-Side Rendering)"
+  },
+  "architecture_updates": {
+    "storage_strategy": "Migração para Supabase Storage para gerenciamento de mídia.",
+    "audit_context": "Adição de campos de Título e Comentário para enriquecer a análise da IA.",
+    "resilience": "Inicialização segura do cliente Supabase para evitar erros de build/runtime sem chaves configuradas."
+  },
+  "major_fixes_applied": [
+    {
+      "issue": "Invalid Supabase URL error",
+      "fix": "Adicionada validação defensiva na criação do cliente Supabase."
+    },
+    {
+      "issue": "Module not found: @supabase/supabase-js",
+      "fix": "Sincronização forçada da dependência no package.json."
+    }
+  ],
+  "current_status": "MVP Funcional com upload para Supabase, histórico filtrado por usuário e feedback de IA contextualizado."
+}

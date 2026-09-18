@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permite que o usuário acesse apenas seus próprios dados de perfil
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId 
+        && !request.resource.data.keys().hasAny(['role', 'empresaId']);
+      allow update: if request.auth != null && request.auth.uid == userId
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'empresaId']));
+    }
+    
+    // Regras de Isolamento Nível P0 para Auditorias por UID
+    match /audits/{auditId} {
+      allow create: if request.auth != null 
+        && request.resource.data.auditorId == request.auth.uid;
+      
+      allow read, update, delete: if request.auth != null 
+        && resource.data.auditorId == request.auth.uid;
+    }
+
+    // Bloqueio global para segurança por omissão
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

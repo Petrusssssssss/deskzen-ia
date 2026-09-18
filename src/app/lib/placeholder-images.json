@@ -1,0 +1,23 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "before-audit",
+      "description": "Espaço de trabalho bagunçado",
+      "imageUrl": "https://picsum.photos/seed/messy1/600/400",
+      "imageHint": "messy desk"
+    },
+    {
+      "id": "after-audit",
+      "description": "Espaço de trabalho organizado",
+      "imageUrl": "https://picsum.photos/seed/clean1/600/400",
+      "imageHint": "organized office"
+    },
+    {
+      "id": "coach-avatar",
+      "description": "Avatar do Coach 5S",
+      "imageUrl": "https://picsum.photos/seed/coach1/200/200",
+      "imageHint": "strict person"
+    }
+  ]
+}

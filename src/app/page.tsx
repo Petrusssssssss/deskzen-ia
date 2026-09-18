@@ -80,7 +80,11 @@ export default function DeskZenPage() {
         photoUri,
         ambienteTipo,
       });
-      setResultado(res);
+      if (!res.success || !res.data) {
+        alert(res.error || "Houve uma instabilidade ao analisar a foto. Tente novamente.");
+        return;
+      }
+      setResultado(res.data);
     } catch (error: any) {
       console.error("Erro na análise da IA:", error);
       alert("Houve uma instabilidade ao analisar a foto. Tente novamente em instantes.");

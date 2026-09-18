@@ -7,6 +7,7 @@
 import { ai } from "@/ai/genkit";
 import { z } from "genkit";
 
+
 const AnalisarFocoInputSchema = z.object({
   photoUri: z.string().describe("Data URI da foto em base64."),
   ambienteTipo: z.string().optional().describe("Tipo de ambiente: mesa, home office, quarto, bancada."),
@@ -31,6 +32,12 @@ const AnalisarFocoOutputSchema = z.object({
   texto_linkedin: z.string().describe("Texto pronto e engajador para o usuário copiar e postar no LinkedIn com o print."),
 });
 export type AnalisarFocoOutput = z.infer<typeof AnalisarFocoOutputSchema>;
+
+interface AnalisarFocoResult {
+  success: boolean;
+  data?: AnalisarFocoOutput;
+  error?: string;
+}
 
 const prompt = ai.definePrompt({
   name: "analisarFocoAmbientePrompt",
@@ -84,6 +91,22 @@ const analisarFocoFlow = ai.defineFlow(
   }
 );
 
-export async function analisarFocoAmbiente(input: AnalisarFocoInput): Promise<AnalisarFocoOutput> {
-  return await analisarFocoFlow(input);
+export async function analisarFocoAmbiente(input: AnalisarFocoInput): Promise<AnalisarFocoResult> {
+  try {
+    const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!key) {
+      return {
+        success: false,
+        error: "Chave GEMINI_API_KEY não configurada na Vercel. Adicione a variável em Settings > Environment Variables e refaça o Deploy.",
+      };
+    }
+    const output = await analisarFocoFlow(input);
+    return { success: true, data: output };
+  } catch (err: any) {
+    console.error("Erro na análise do DeskZen:", err);
+    return {
+      success: false,
+      error: err?.message || "Erro desconhecido ao processar a análise com a IA.",
+    };
+  }
 }

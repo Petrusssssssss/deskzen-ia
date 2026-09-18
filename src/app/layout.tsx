@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'DeskZen IA - Raio-X de Foco e Organização em 1 Foto',
@@ -44,9 +43,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased bg-background text-foreground min-h-screen">
-        <FirebaseClientProvider>
-          {children}
-        </FirebaseClientProvider>
+        {children}
       </body>
     </html>
   );

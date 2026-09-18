@@ -8,5 +8,5 @@ export const ai = genkit({
     }),
   ],
   // Utilizando o modelo Gemini 2.5 Flash conforme solicitado para estabilidade
-  model: googleAI.model(process.env.GEMINI_MODEL as any || 'gemini-2.5-flash'),
+  model: googleAI.model(process.env.GEMINI_MODEL as any || 'gemini-3.6-flash'),
 });

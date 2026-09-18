@@ -42,9 +42,10 @@ export default function DeskZenPage() {
   const [segundosRestantes, setSegundosRestantes] = useState(180); // 3 minutos
 
   // Estado do Som Ambiente de Foco (Web Audio API)
-  const [somAtual, setSomAtual] = useState<"nenhum" | "chuva" | "marrom">("nenhum");
+  type SomTipo = "nenhum" | "chuva" | "marrom" | "ondas" | "zen";
+  const [somAtual, setSomAtual] = useState<SomTipo>("nenhum");
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const noiseNodeRef = useRef<AudioNode | null>(null);
+  const activeNodesRef = useRef<any[]>([]);
 
   // Timer de 3 minutos
   useEffect(() => {
@@ -61,8 +62,25 @@ export default function DeskZenPage() {
     };
   }, [timerAtivo, segundosRestantes]);
 
-  // Controle de Som Ambiente de Concentração
-  const toggleSom = (tipo: "chuva" | "marrom") => {
+  // Controle de Som Ambiente de Concentração (4 Modos Distintos)
+  const pararSom = () => {
+    activeNodesRef.current.forEach((node) => {
+      try {
+        node.stop?.();
+        node.disconnect?.();
+      } catch (e) {}
+    });
+    activeNodesRef.current = [];
+    if (audioCtxRef.current) {
+      try {
+        audioCtxRef.current.close();
+      } catch (e) {}
+      audioCtxRef.current = null;
+    }
+    setSomAtual("nenhum");
+  };
+
+  const toggleSom = (tipo: SomTipo) => {
     if (somAtual === tipo) {
       pararSom();
       return;
@@ -74,64 +92,128 @@ export default function DeskZenPage() {
       const ctx = new AudioCtx();
       audioCtxRef.current = ctx;
 
-      const bufferSize = ctx.sampleRate * 2;
-      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
+      const nodes: any[] = [];
 
-      if (tipo === "marrom") {
-        // Ruído Marrom para foco profundo
+      if (tipo === "zen") {
+        // Frequência Zen 432Hz + 436Hz (Theta binaural drone)
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.04, ctx.currentTime);
+
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(432, ctx.currentTime);
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(436, ctx.currentTime);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc1.start();
+        osc2.start();
+        nodes.push(osc1, osc2, gain);
+      } else if (tipo === "ondas") {
+        // Ondas do Mar: Ruído com LFO modulando volume suavemente
+        const bufferSize = ctx.sampleRate * 2;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        noise.loop = true;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(450, ctx.currentTime);
+
+        const gainNode = ctx.createGain();
+        gainNode.gain.setValueAtTime(0.04, ctx.currentTime);
+
+        const lfo = ctx.createOscillator();
+        lfo.type = "sine";
+        lfo.frequency.setValueAtTime(0.12, ctx.currentTime); // ciclo a cada ~8s
+
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.setValueAtTime(0.05, ctx.currentTime);
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(gainNode.gain);
+
+        noise.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        noise.start();
+        lfo.start();
+        nodes.push(noise, filter, gainNode, lfo, lfoGain);
+      } else if (tipo === "marrom") {
+        // Ruído Marrom Profundo (Frequências baixas bem pesadas e aveludadas)
+        const bufferSize = ctx.sampleRate * 2;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
         let lastOut = 0.0;
         for (let i = 0; i < bufferSize; i++) {
           const white = Math.random() * 2 - 1;
           data[i] = (lastOut + 0.02 * white) / 1.02;
           lastOut = data[i];
-          data[i] *= 2.8;
+          data[i] *= 3.5;
         }
-      } else {
-        // Som de Chuva Suave (Ruído rosa filtrado)
-        let b0 = 0, b1 = 0, b2 = 0;
+
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        noise.loop = true;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(160, ctx.currentTime); // corte grave em 160Hz
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        noise.start();
+        nodes.push(noise, filter, gain);
+      } else if (tipo === "chuva") {
+        // Chuva Suave (Filtrada em médios/altos)
+        const bufferSize = ctx.sampleRate * 2;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) {
-          const white = Math.random() * 2 - 1;
-          b0 = 0.99886 * b0 + white * 0.0555179;
-          b1 = 0.99332 * b1 + white * 0.0750759;
-          b2 = 0.96900 * b2 + white * 0.1538520;
-          data[i] = (b0 + b1 + b2 + white * 0.05) * 0.35;
+          data[i] = Math.random() * 2 - 1;
         }
+
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        noise.loop = true;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.setValueAtTime(1100, ctx.currentTime);
+        filter.Q.setValueAtTime(0.7, ctx.currentTime);
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.06, ctx.currentTime);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        noise.start();
+        nodes.push(noise, filter, gain);
       }
 
-      const noise = ctx.createBufferSource();
-      noise.buffer = buffer;
-      noise.loop = true;
-
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-
-      noise.connect(gain);
-      gain.connect(ctx.destination);
-      noise.start();
-
-      noiseNodeRef.current = noise;
+      activeNodesRef.current = nodes;
       setSomAtual(tipo);
     } catch (e) {
       console.error("Web Audio error:", e);
     }
-  };
-
-  const pararSom = () => {
-    if (noiseNodeRef.current) {
-      try {
-        (noiseNodeRef.current as any).stop?.();
-        noiseNodeRef.current.disconnect();
-      } catch (e) {}
-      noiseNodeRef.current = null;
-    }
-    if (audioCtxRef.current) {
-      try {
-        audioCtxRef.current.close();
-      } catch (e) {}
-      audioCtxRef.current = null;
-    }
-    setSomAtual("nenhum");
   };
 
   useEffect(() => {
@@ -261,10 +343,7 @@ export default function DeskZenPage() {
           </div>
         </div>
 
-        <Badge variant="outline" className="border-purple-500/30 bg-purple-500/10 text-purple-300 text-xs px-2.5 py-1">
-          <Zap className="w-3.5 h-3.5 mr-1 text-purple-400 animate-pulse" />
-          Gemini 3.6 Multimodal
-        </Badge>
+
       </header>
 
       {/* Hero / Upload Card */}
@@ -567,14 +646,14 @@ export default function DeskZenPage() {
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="p-5 flex items-center justify-center gap-3">
+              <CardContent className="p-5 flex flex-wrap items-center justify-center gap-2.5">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => toggleSom("chuva")}
-                  className={`text-xs px-4 py-2 rounded-xl transition-all border ${
+                  className={`text-xs px-3.5 py-2 rounded-xl transition-all border ${
                     somAtual === "chuva"
-                      ? "bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-600/30"
+                      ? "bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-600/30 font-medium"
                       : "border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-800"
                   }`}
                 >
@@ -585,13 +664,39 @@ export default function DeskZenPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => toggleSom("marrom")}
-                  className={`text-xs px-4 py-2 rounded-xl transition-all border ${
+                  className={`text-xs px-3.5 py-2 rounded-xl transition-all border ${
                     somAtual === "marrom"
-                      ? "bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-600/30"
+                      ? "bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-600/30 font-medium"
                       : "border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-800"
                   }`}
                 >
-                  ☕ Ruído Marrom (Foco)
+                  ☕ Ruído Marrom (Grave)
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleSom("ondas")}
+                  className={`text-xs px-3.5 py-2 rounded-xl transition-all border ${
+                    somAtual === "ondas"
+                      ? "bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-600/30 font-medium"
+                      : "border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-800"
+                  }`}
+                >
+                  🌊 Ondas do Mar
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleSom("zen")}
+                  className={`text-xs px-3.5 py-2 rounded-xl transition-all border ${
+                    somAtual === "zen"
+                      ? "bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-600/30 font-medium"
+                      : "border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-800"
+                  }`}
+                >
+                  🧘 Frequência 432Hz
                 </Button>
 
                 {somAtual !== "nenhum" && (
@@ -599,7 +704,7 @@ export default function DeskZenPage() {
                     variant="ghost"
                     size="sm"
                     onClick={pararSom}
-                    className="text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 px-3"
+                    className="text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 px-3 ml-1"
                   >
                     <VolumeX className="w-3.5 h-3.5 mr-1" />
                     Silêncio
@@ -624,9 +729,8 @@ export default function DeskZenPage() {
       </div>
 
       {/* Footer */}
-      <footer className="w-full max-w-2xl text-center py-8 text-slate-500 text-xs space-y-1">
-        <p>DeskZen IA • Inspirado na filosofia Lean 5S adaptada para alta performance pessoal.</p>
-        <p className="text-[10px] text-slate-600">Processamento em nuvem com Gemini 3.6 Flash. Nenhuma imagem pessoal é retida.</p>
+      <footer className="w-full max-w-2xl text-center py-8 text-slate-600 text-xs">
+        <p>DeskZen IA • Espaço limpo, mente focada.</p>
       </footer>
     </main>
   );

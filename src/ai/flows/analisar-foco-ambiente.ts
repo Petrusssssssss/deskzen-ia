@@ -1,12 +1,11 @@
 'use server';
 /**
  * @fileOverview Fluxo Genkit para análise visual de 1 foto de espaço de trabalho.
- * Calcula o Score de Foco, diagnostica poluição visual e gera plano de 3 passos de ação.
+ * Calcula o Score de Foco, diagnostica poluição visual, gera plano de ação e dicas ergonômicas.
  */
 
 import { ai } from "@/ai/genkit";
 import { z } from "genkit";
-
 
 const AnalisarFocoInputSchema = z.object({
   photoUri: z.string().describe("Data URI da foto em base64."),
@@ -29,7 +28,8 @@ const AnalisarFocoOutputSchema = z.object({
   distracoes_detectadas: z.array(z.string()).describe("Lista de 3 a 5 itens físicos reais detectados na foto que roubam atenção."),
   plano_3_passos: z.array(PassoAcaoSchema).describe("Exatamente 3 passos práticos para arrumar a mesa em 3 minutos."),
   ganho_produtividade: z.string().describe("Estimativa de ganho de foco ao concluir (ex: +35% de clareza mental)."),
-  texto_linkedin: z.string().describe("Texto pronto e engajador para o usuário copiar e postar no LinkedIn com o print."),
+  dica_ergonomica_ouro: z.string().describe("Dica prática e personalizada de ergonomia, postura ou iluminação observada na foto."),
+  tempo_economizado: z.string().describe("Estimativa de tempo salvo no dia evitando distrações (ex: ~45 min/dia de foco recuperado)."),
 });
 export type AnalisarFocoOutput = z.infer<typeof AnalisarFocoOutputSchema>;
 
@@ -70,8 +70,8 @@ INSTRUÇÕES DE ANÁLISE VISUAL:
      Passo 2: Agrupamento lógico (alinhar teclado/mouse, cabos ou guardar miudezas).
      Passo 3: Liberação da zona primária de foco (área onde as mãos descansam).
 
-5. TEXTO PARA O LINKEDIN:
-   - Crie um post magnético e inspirador, com quebras de linha e emojis, pronto para a pessoa colar no LinkedIn mostrando o seu Score de Foco na mesa e como o ambiente afeta a produtividade.
+5. DICA ERGONÔMICA DE OURO:
+   - Entregue uma recomendação cirúrgica e personalizada sobre postura, altura de tela, iluminação ou posicionamento de periféricos baseada na foto real do usuário.
 
 FOTO DO ESPAÇO: {{media url=photoUri}}`,
 });
